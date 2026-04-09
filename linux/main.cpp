@@ -12,6 +12,10 @@
 #include <QTimer>
 #include <QProcess>
 #include <QRegularExpression>
+#include <QTranslator>
+#include <QLibraryInfo>
+#include <QDir>
+#include <QStandardPaths>
 
 #include "airpods_packets.h"
 #include "logger.h"
@@ -987,6 +991,25 @@ private:
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
 
+    // Load translations
+    QTranslator *translator = new QTranslator(&app);
+    QString locale = QLocale::system().name();
+
+    // Try to load translation from various locations
+    QStringList translationPaths = {
+        QCoreApplication::applicationDirPath() + "/translations",
+        QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + "/librepods/translations",
+        "/usr/share/librepods/translations",
+        "/usr/local/share/librepods/translations"
+    };
+
+    for (const QString &path : translationPaths) {
+        if (translator->load("librepods_" + locale, path)) {
+            app.installTranslator(translator);
+            break;
+        }
+    }
+
     QLocalServer::removeServer("app_server");
 
     QFile stale("/tmp/app_server");
@@ -1065,6 +1088,18 @@ int main(int argc, char *argv[]) {
                 {
                     trayApp->loadMainModule();
                 }
+            }
+            else if (msg == "noise:off") {
+                trayApp->setNoiseControlModeInt(0);
+            }
+            else if (msg == "noise:anc") {
+                trayApp->setNoiseControlModeInt(1);
+            }
+            else if (msg == "noise:transparency") {
+                trayApp->setNoiseControlModeInt(2);
+            }
+            else if (msg == "noise:adaptive") {
+                trayApp->setNoiseControlModeInt(3);
             }
             else
             {
